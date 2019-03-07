@@ -37,6 +37,7 @@ public:
 private:
     void loadScene();
 
+	
     double time_;
     SimParameters params_;
     std::string sceneFile_;

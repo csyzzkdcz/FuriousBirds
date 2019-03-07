@@ -29,6 +29,7 @@ private:
     Eigen::MatrixX3d V;
     Eigen::MatrixX3i F;
     
+	Eigen::Vector3d originalCenterOfMass_;
     double volume_;
     double radius_;
     Eigen::Matrix3d inertiaTensor_;    
