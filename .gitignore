@@ -5,6 +5,7 @@
 /build
 /Eigen
 /readmetex
+/cmake
 
 # User-specific files
 *.suo
