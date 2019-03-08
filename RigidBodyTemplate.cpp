@@ -42,7 +42,7 @@ void RigidBodyTemplate::initialize()
 		-xz         -yz x^2+y^2
 
 	*/
-  volume_ = 0.0;
+	volume_ = 0.0;
 	inertiaTensor_.setZero();
 	originalCenterOfMass_.setZero();
 	
@@ -83,8 +83,11 @@ void RigidBodyTemplate::initialize()
 				for (int r = 0; r < 3; r++)
 				{
 					int count = ((p == q) + (q == r) + (r == p));
-					int factor = 1;
-					while (count--) factor *= count;
+					double factor = 1.0;
+					if (count == 3)
+						factor = 6.0;
+					if (count == 1)
+						factor = 2.0;
 					homogeniousTerm += (factor * auxV(p, 0) * auxV(q, 1) * auxV(r, 2));
 				}
 			}
@@ -115,6 +118,8 @@ void RigidBodyTemplate::initialize()
 			
 	} 
 
+	if (volume_ < 1e-14)
+		std::cout << "Warning: Volume goes wrong!\n";
 	originalCenterOfMass_ /= volume_;
 
 	std::cout << "Volume: " << volume_ << std::endl;
