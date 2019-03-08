@@ -13,6 +13,8 @@ RigidBodyInstance::RigidBodyInstance(const RigidBodyTemplate &rbtemplate,
     double density)
     : c(c), theta(theta), cvel(cvel), w(w), density(density), rbtemplate_(rbtemplate)
 {
+	mass = density * rbtemplate_.getVolume();
+	massInv = 1.0 / mass;
 }
 
 RigidBodyInstance::~RigidBodyInstance()

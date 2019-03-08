@@ -37,7 +37,9 @@ public:
 private:
     void loadScene();
 
-	
+	void processGravityFieldForce(const Eigen::VectorXd &c, Eigen::VectorXd &F);
+	void processGravityFieldForce(Eigen::VectorXd &F);
+
     double time_;
     SimParameters params_;
     std::string sceneFile_;

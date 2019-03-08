@@ -20,11 +20,14 @@ public:
     Eigen::Vector3d w;
 
     double density;
+	double mass;
+	double massInv;
     
     const RigidBodyTemplate &getTemplate() const {return rbtemplate_;}
-    
+	
 private:
     const RigidBodyTemplate &rbtemplate_;
+
 };
 
 #endif // RIGIDBODYINSTANCE_H
