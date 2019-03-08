@@ -139,6 +139,8 @@ void BirdsHook::processGravityFieldForce(const VectorXd &c, VectorXd &F)
 {
 	// I simply assume there will be configurations of current position (c in notation), which is a 3n-dim vector
 	// If not, the program will compute gravity force based on c in each of element in queue variable bodies_
+
+	// I did not set F to be zero, so just make sure where you shall initialize it
 	int nbodies = (int)bodies_.size();
 	for (int i = 0; i < nbodies; i++)
 	{
@@ -150,8 +152,8 @@ void BirdsHook::processGravityFieldForce(const VectorXd &c, VectorXd &F)
 			double constPart = params_.gravityG * bodies_[i]->mass * bodies_[j]->mass/pow(dist,3);
 
 			// F = -dV
-			F.segment<3>(3 * i) -= constPart * (c1 - c2);
-			F.segment<3>(3 * j) -= constPart * (c2 - c1);
+			F.segment<3>(3 * i) -= (constPart * (c1 - c2));
+			F.segment<3>(3 * j) -= (constPart * (c2 - c1));
 		}
 	}
 }
@@ -170,8 +172,8 @@ void BirdsHook::processGravityFieldForce(VectorXd &F)
 			double constPart = params_.gravityG * bodies_[i]->mass * bodies_[j]->mass / pow(dist, 3);
 
 			// F = -dV
-			F.segment<3>(3 * i) -= constPart * (c1 - c2);
-			F.segment<3>(3 * j) -= constPart * (c2 - c1);
+			F.segment<3>(3 * i) -= (constPart * (c1 - c2));
+			F.segment<3>(3 * j) -= (constPart * (c2 - c1));
 		}
 	}
 }
