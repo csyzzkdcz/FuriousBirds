@@ -2,6 +2,7 @@
 #include "RigidBodyTemplate.h"
 #include "RigidBodyInstance.h"
 #include "VectorMath.h"
+#include "NewtonSolver.h"
 #include "igl/opengl/glfw/imgui/ImGuiHelpers.h"
 
 using namespace Eigen;
@@ -71,10 +72,70 @@ void BirdsHook::tick()
 bool BirdsHook::simulateOneStep()
 {   
     time_ += params_.timeStep;
-
-    // TODO: rigid body dynamics
+    Eigen::VectorXd c, cvel, theta, w;
+    buildConfiguration(c, cvel, theta, w);
+    timeIntegration(c, cvel, theta, w);
+    unbuildConfiguration(c, cvel, theta, w);
 
     return false;
+}
+
+void BirdsHook::timeIntegration(Eigen::VectorXd &c, Eigen::VectorXd &cvel, Eigen::VectorXd &theta, Eigen::VectorXd &w)
+{
+    c += params_.timeStep * cvel;
+    int nbodies =  bodies_.size();
+    VectorMath vecOp;
+    for(int i = 0; i<nbodies; i++)
+    {
+        Eigen::Matrix3d R = vecOp.rotationMatrix(theta.segment(3*i, 3)) * vecOp.rotationMatrix(params_.timeStep * w.segment(3*i, 3));
+        theta.segment(3*i, 3) = vecOp.axisAngle(R);
+    }
+    Eigen::VectorXd force = Eigen::VectorXd::Zero(3*nbodies);
+    processGravityFieldForce(c, force);
+    for(int i = 0; i<nbodies; i++)
+    {
+        cvel.segment(3*i, 3) += params_.timeStep * bodies_[i]->massInv * force.segment(3*i, 3);
+    }
+    
+    bool isSuccess = newtonSolver(w, [this, w](Eigen::VectorXd curw, Eigen::VectorXd &F, Eigen::SparseMatrix<double> *gradF)
+                                  {
+                                      this->computeValueAndGrad(curw, w, &F, gradF);
+                                  }, params_.NewtonMaxIters, params_.NewtonTolerance);
+    if(isSuccess)
+    {
+        std::cout<<"Newton Soler succeeded!!"<<std::endl;
+    }
+}
+
+void BirdsHook::buildConfiguration(Eigen::VectorXd &c, Eigen::VectorXd &cvel, Eigen::VectorXd &theta, Eigen::VectorXd &w)
+{
+    int nbodies =  bodies_.size();
+    c.resize(3 * nbodies);
+    cvel.resize(3 * nbodies);
+    theta.resize(3 * nbodies);
+    w.resize(3 * nbodies);
+    
+    for(int i=0;i<nbodies;i++)
+    {
+        c.segment(3*i, 3) = bodies_[i]->c;
+        cvel.segment(3*i, 3) = bodies_[i]->cvel;
+        theta.segment(3*i, 3) = bodies_[i]->theta;
+        w.segment(3*i, 3) = bodies_[i]->w;
+    }
+}
+
+void BirdsHook::unbuildConfiguration(Eigen::VectorXd c, Eigen::VectorXd cvel, Eigen::VectorXd theta, Eigen::VectorXd w)
+{
+    int nbodies =  bodies_.size();
+    
+    for(int i=0;i<nbodies;i++)
+    {
+        bodies_[i]->c = c.segment(3*i, 3);
+        bodies_[i]->cvel = cvel.segment(3*i, 3);
+        bodies_[i]->theta = theta.segment(3*i, 3);
+        bodies_[i]->w = w.segment(3*i, 3);
+    }
+    
 }
 
 void BirdsHook::loadScene()
@@ -96,7 +157,14 @@ void BirdsHook::loadScene()
         scenefname = prefix + scenefname;        
         ifs.open(scenefname);
         if(!ifs)
-            return;
+        {
+            prefix = "../../";   // For xcode && VS build/release
+            scenefname = prefix + std::string("scenes/") + sceneFile_;
+            ifs.open(scenefname);
+            if(!ifs)
+                return;
+        }
+            
     }
         
 
@@ -178,3 +246,63 @@ void BirdsHook::processGravityFieldForce(VectorXd &F)
 	}
 }
 
+void BirdsHook::computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw, Eigen::VectorXd *f, Eigen::SparseMatrix<double> *df)
+{
+    // Right now, in our case, d_{\theta} V(q^{i+1}) = 0
+    int nbodies =  bodies_.size();
+    VectorMath vecOp;
+    std::vector<Eigen::Triplet<double> > triplet;
+    if(f != NULL)
+        f->resize(3*nbodies);
+    for(int i=0;i<nbodies;i++)
+    {
+        Eigen::Matrix3d MI = bodies_[i]->getTemplate().inertiaTensor_;
+        Eigen::Vector3d avew = (curw.segment(3*i, 3) + prevw.segment(3*i, 3)) / 2.0;
+        Eigen::Matrix3d avewMat = vecOp.crossProductMatrix(avew);
+        if(f != NULL)
+            f->segment(3*i, 3) = MI*(curw.segment(3*i, 3) - prevw.segment(3*i, 3)) + params_.timeStep * avewMat * MI * prevw.segment(3*i, 3);
+
+        Eigen::Vector3d v = -0.5 * params_.timeStep * MI * prevw.segment(3*i, 3);
+        Eigen::Matrix3d localDeriv = MI + vecOp.crossProductMatrix(v);
+
+        for(int j=0;j<3;j++)
+            for(int k=0;k<3;k++)
+            {
+                triplet.push_back(Eigen::Triplet<double>(3*i + j, 3*i + k, localDeriv(j,k)));
+            }
+    }
+    if(df != NULL)
+    {
+        df->resize(3*nbodies, 3*nbodies);
+        df->setFromTriplets(triplet.begin(), triplet.end());
+    }
+    
+}
+
+void BirdsHook::testValueAndGrad()
+{
+    Eigen::VectorXd c, cvel, theta, w;
+    buildConfiguration(c, cvel, theta, w);
+    
+    Eigen::VectorXd prevw = w;
+    timeIntegration(c, cvel, theta, w);
+    Eigen::VectorXd f;
+    Eigen::SparseMatrix<double> df;
+    
+    computeValueAndGrad(w, prevw, &f, &df);
+    
+    Eigen::VectorXd dir = Eigen::VectorXd::Random(w.size());
+    dir.normalized();
+    
+    for(int i = 4; i< 14; i++)
+    {
+        double eps = powf(10, -i);
+        Eigen::VectorXd updatedw = w + eps * dir;
+        Eigen::VectorXd updatedf;
+        computeValueAndGrad(updatedw, prevw, &updatedf, NULL);
+        
+        std::cout<<"EPS is: "<<eps<<std::endl;
+        std::cout<<"The norm of directional derivative is: "<<(df*dir).norm()<<" The norm of finite difference is: "<< ((updatedf - f)/eps).norm() <<std::endl;
+        std::cout<<"The error is: "<<( df*dir - (updatedf - f)/eps).norm()<<std::endl;
+    }
+}

@@ -59,6 +59,12 @@ bool drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
         {
             resetSimulation();
         }
+        if (ImGui::Button("test derivative", ImVec2(-1, 0)))
+        {
+            auto birdHook = static_cast<BirdsHook*>(hook);
+            std::cout<<"Test Force"<<std::endl;
+            birdHook->testValueAndGrad();
+        }
     }
     hook->drawGUI(menu);
     return false;

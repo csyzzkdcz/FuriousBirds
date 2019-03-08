@@ -28,7 +28,8 @@ private:
 
     Eigen::MatrixX3d V;
     Eigen::MatrixX3i F;
-    
+
+public:
 	Eigen::Vector3d originalCenterOfMass_;
     double volume_;
     double radius_;
