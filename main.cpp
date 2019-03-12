@@ -64,6 +64,8 @@ bool drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
             auto birdHook = static_cast<BirdsHook*>(hook);
             std::cout<<"Test Force"<<std::endl;
             birdHook->testValueAndGrad();
+			std::cout << "Check Gravity Force" << std::endl;
+			birdHook->testGravityFieldForce();
         }
     }
     hook->drawGUI(menu);

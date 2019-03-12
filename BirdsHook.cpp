@@ -205,9 +205,6 @@ void BirdsHook::loadScene()
 
 void BirdsHook::processGravityFieldForce(const VectorXd &c, VectorXd &F)
 {
-	// I simply assume there will be configurations of current position (c in notation), which is a 3n-dim vector
-	// If not, the program will compute gravity force based on c in each of element in queue variable bodies_
-
 	// I did not set F to be zero, so just make sure where you shall initialize it
 	int nbodies = (int)bodies_.size();
 	for (int i = 0; i < nbodies; i++)
@@ -225,6 +222,39 @@ void BirdsHook::processGravityFieldForce(const VectorXd &c, VectorXd &F)
 		}
 	}
 }
+
+void BirdsHook::processGravityFieldHessian(const Eigen::VectorXd & c, std::vector<Eigen::Triplet<double>>& HTriplet)
+{
+	int nbodies = (int)bodies_.size();
+	for (int i = 0; i < nbodies; i++)
+	{
+		for (int j = i + 1; j < nbodies; j++)
+		{
+			Eigen::Vector3d c1 = c.segment<3>(3 * i);
+			Eigen::Vector3d c2 = c.segment<3>(3 * j);
+			double dist = (c1 - c2).norm();
+			double constPart = params_.gravityG * bodies_[i]->mass * bodies_[j]->mass / pow(dist, 3);
+
+			// H = -dF
+			Eigen::Matrix3d I = Eigen::Matrix3d::Identity();
+			Eigen::Matrix3d localH = I * constPart - 3 * constPart * (c1 - c2)*(c1 - c2).transpose() / dist / dist;
+			
+			for (int k = 0; k < 3; k++)
+			{
+				for (int l = 0; l < 3; l++)
+				{
+					HTriplet.push_back(Eigen::Triplet<double>(3 * i + k, 3 * i + l, localH(k, l)));
+					HTriplet.push_back(Eigen::Triplet<double>(3 * j + k, 3 * j + l, localH(k, l)));
+
+					HTriplet.push_back(Eigen::Triplet<double>(3 * i + k, 3 * j + l, -localH(k, l)));
+					HTriplet.push_back(Eigen::Triplet<double>(3 * j + k, 3 * i + l, -localH(k, l)));
+				}
+			}
+		}
+	}
+}
+
+
 
 void BirdsHook::computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw, Eigen::VectorXd *f, Eigen::SparseMatrix<double> *df)
 {
@@ -285,4 +315,39 @@ void BirdsHook::testValueAndGrad()
         std::cout<<"The norm of directional derivative is: "<<(df*dir).norm()<<" The norm of finite difference is: "<< ((updatedf - f)/eps).norm() <<std::endl;
         std::cout<<"The error is: "<<( df*dir - (updatedf - f)/eps).norm()<<std::endl;
     }
+}
+
+void BirdsHook::testGravityFieldForce()
+{
+	Eigen::VectorXd c, cvel, theta, w;
+	buildConfiguration(c, cvel, theta, w);
+
+	Eigen::VectorXd f;
+	Eigen::SparseMatrix<double> H;
+	std::vector<Eigen::Triplet<double>> HCoef;
+
+	f.resize(c.size());
+	f.setZero();
+	processGravityFieldForce(c, f);
+	processGravityFieldHessian(c, HCoef);
+
+	H.resize(c.size(), c.size());
+	H.setFromTriplets(HCoef.begin(), HCoef.end());
+	
+	Eigen::VectorXd dir = Eigen::VectorXd::Random(c.size());
+	dir.normalized();
+
+	for (int i = 4; i< 14; i++)
+	{
+		double eps = powf(10, -i);
+		Eigen::VectorXd updatedc = c + eps * dir;
+		Eigen::VectorXd updatedf;
+		updatedf.resize(c.size());
+		updatedf.setZero();
+		processGravityFieldForce(updatedc, updatedf);
+
+		std::cout << "EPS is: " << eps << std::endl;
+		std::cout << "The norm of Hessian is: " << (H*dir).norm() << " The norm of finite difference is: " << ((updatedf - f) / eps).norm() << std::endl;
+		std::cout << "The error is: " << (H*dir + (updatedf - f) / eps).norm() << std::endl;
+	}
 }

@@ -35,12 +35,13 @@ public:
     }
     
     void testValueAndGrad();
+	void testGravityFieldForce();
     
 private:
     void loadScene();
 
 	void processGravityFieldForce(const Eigen::VectorXd &c, Eigen::VectorXd &F);
-	void processGravityFieldForce(Eigen::VectorXd &F);
+	void processGravityFieldHessian(const Eigen::VectorXd &c, std::vector<Eigen::Triplet<double>> &HTriplet);
     
     void buildConfiguration(Eigen::VectorXd &c, Eigen::VectorXd &cvel, Eigen::VectorXd &theta, Eigen::VectorXd &w);
     void unbuildConfiguration(Eigen::VectorXd c, Eigen::VectorXd cvel, Eigen::VectorXd theta, Eigen::VectorXd w);
