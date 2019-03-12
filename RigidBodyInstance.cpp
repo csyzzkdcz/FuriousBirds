@@ -15,6 +15,8 @@ RigidBodyInstance::RigidBodyInstance(const RigidBodyTemplate &rbtemplate,
 {
 	mass = density * rbtemplate_.getVolume();
 	massInv = 1.0 / mass;
+	// This is to avoid confusion of where the rho is:
+	intertiaTensor = density * rbtemplate_.getInertiaTensor();
 }
 
 RigidBodyInstance::~RigidBodyInstance()

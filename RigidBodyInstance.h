@@ -22,7 +22,8 @@ public:
     double density;
 	double mass;
 	double massInv;
-    
+	Eigen::Matrix3d intertiaTensor;
+
     const RigidBodyTemplate &getTemplate() const {return rbtemplate_;}
 	
 private:

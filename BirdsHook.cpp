@@ -266,7 +266,7 @@ void BirdsHook::computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw,
         f->resize(3*nbodies);
     for(int i=0;i<nbodies;i++)
     {
-        Eigen::Matrix3d MI = bodies_[i]->getTemplate().inertiaTensor_;
+		Eigen::Matrix3d MI = bodies_[i]->intertiaTensor;
         Eigen::Vector3d avew = (curw.segment(3*i, 3) + prevw.segment(3*i, 3)) / 2.0;
         Eigen::Matrix3d avewMat = vecOp.crossProductMatrix(avew);
         if(f != NULL)
