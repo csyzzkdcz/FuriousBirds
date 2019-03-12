@@ -26,9 +26,7 @@ RigidBodyTemplate::~RigidBodyTemplate()
 
 void RigidBodyTemplate::initialize()
 {
-  // TODO compute quantities such as volume, center of mass, and intertia tensor
-  // translate body so its center of mass is the world origin
-
+  
   // Compute all numerical integrals
   // For time efficiency, compute once for all
   // The code might not have good readability, but you will only iterate faces once
