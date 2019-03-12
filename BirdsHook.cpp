@@ -226,26 +226,6 @@ void BirdsHook::processGravityFieldForce(const VectorXd &c, VectorXd &F)
 	}
 }
 
-void BirdsHook::processGravityFieldForce(VectorXd &F)
-{
-	// Delete this if you have configuration binding
-	int nbodies = (int)bodies_.size();
-	for (int i = 0; i < nbodies; i++)
-	{
-		for (int j = i + 1; j < nbodies; j++)
-		{
-			Eigen::Vector3d c1 = bodies_[i]->c;
-			Eigen::Vector3d c2 = bodies_[j]->c;
-			double dist = (c1 - c2).norm();
-			double constPart = params_.gravityG * bodies_[i]->mass * bodies_[j]->mass / pow(dist, 3);
-
-			// F = -dV
-			F.segment<3>(3 * i) -= (constPart * (c1 - c2));
-			F.segment<3>(3 * j) -= (constPart * (c2 - c1));
-		}
-	}
-}
-
 void BirdsHook::computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw, Eigen::VectorXd *f, Eigen::SparseMatrix<double> *df)
 {
     // Right now, in our case, d_{\theta} V(q^{i+1}) = 0
