@@ -52,26 +52,47 @@ void RigidBodyTemplate::initialize()
 		v2 = V.row(F(i, 1));
 		v3 = V.row(F(i, 2));
 		Eigen::Vector3d n;
+		// norm(n)= 2area(v1,v2,v3)
 		n = (v2 - v1).cross(v3 - v1);
 
-		volume_ = volume_ + ((v1 + v2 + v3).dot(n)) / 18.0;  // norm(n)= 2area(v1,v2,v3)
-
-		double squareTerms[3];
-
+		volume_ = volume_ + ((v1 + v2 + v3).dot(n)) / 18.0;
 		for (int j = 0; j < 3; j++)
 		{
 			originalCenterOfMass_[j] += (n[j] * (v1[j] * v1[j] + v2[j] * v2[j] + v3[j] * v3[j] + v1[j] * v2[j] + v1[j] * v3[j] + v2[j] * v3[j]) / 24.0);
+			
+		}
+	}
+
+	if (volume_ < 1e-14)
+		std::cout << "Warning: Volume goes wrong!\n";
+	originalCenterOfMass_ /= volume_;
+	// Shift the geometry
+	V = V.rowwise() - originalCenterOfMass_.transpose();
+
+	for (int i = 0; i < F.rows(); i++)
+	{
+		Eigen::Vector3d v1, v2, v3;
+		v1 = V.row(F(i, 0));
+		v2 = V.row(F(i, 1));
+		v3 = V.row(F(i, 2));
+		Eigen::Vector3d n;
+		// norm(n)= 2area(v1,v2,v3)
+		n = (v2 - v1).cross(v3 - v1);
+		double squareTerms[3];
+
+		// compute Squared Term
+		for (int j = 0; j < 3; j++)
+		{n = (v2 - v1).cross(v3 - v1);
 			squareTerms[j] = n[j] * (v1[j] * v1[j] * v1[j] + v2[j] * v2[j] * v2[j] + v3[j] * v3[j] * v3[j] +
 				v1[j] * v1[j] * v2[j] + v1[j] * v1[j] * v3[j] + v2[j] * v2[j] * v1[j] + v2[j] * v2[j] * v3[j]
 				+ v3[j] * v3[j] * v1[j] + v3[j] * v3[j] * v2[j] + v1[j] * v2[j] * v3[j]) / 60.0;
 		}
-		
 		// Compute cross term : 0 yz 1 xz 2 xy
 
 		Matrix3d auxV;
-		auxV.row(0) = v1;
-		auxV.row(1) = v2;
-		auxV.row(2) = v3;
+		auxV.row(0) = V.row(F(i, 0));
+		auxV.row(1) = V.row(F(i, 1));
+		auxV.row(2) = V.row(F(i, 2));
 		double crossTerms[3];
 		double homogeniousTerm = 0.0;
 		for (int p = 0; p < 3; p++)
@@ -91,13 +112,9 @@ void RigidBodyTemplate::initialize()
 			}
 		}
 		homogeniousTerm /= 120.0;
-		for (int j = 0; j < 3; j++)
+		for(int l = 0; l < 3; l++)
 		{
-			for (int k = j+1; k < 3; k++)
-			{
-				int l = 3 - j - k;
-				crossTerms[l] = n[l] * homogeniousTerm;
-			}
+			crossTerms[l] = n[l] * homogeniousTerm;
 		}
 
 		// Assemble Interia Tensor
@@ -116,14 +133,10 @@ void RigidBodyTemplate::initialize()
 			
 	} 
 
-	if (volume_ < 1e-14)
-		std::cout << "Warning: Volume goes wrong!\n";
-	originalCenterOfMass_ /= volume_;
 
 	std::cout << "Volume: " << volume_ << std::endl;
 	std::cout << "Center of Mass: " << originalCenterOfMass_.transpose() << std::endl;
 	std::cout << "Inertia Tensor: " << std::endl << inertiaTensor_ << std::endl;
 
-	// Shift the geometry
-	V = V.rowwise() - originalCenterOfMass_.transpose();
+	
 }		
