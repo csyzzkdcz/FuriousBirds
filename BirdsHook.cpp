@@ -89,7 +89,29 @@ void BirdsHook::timeIntegration(Eigen::VectorXd &c, Eigen::VectorXd &cvel, Eigen
     for(int i = 0; i<nbodies; i++)
     {
         Eigen::Matrix3d R = vecOp.rotationMatrix(theta.segment(3*i, 3)) * vecOp.rotationMatrix(params_.timeStep * w.segment(3*i, 3));
-		theta.segment(3*i, 3) = vecOp.axisAngle(R);
+		Eigen::Vector3d currtheta = vecOp.axisAngle(R);
+		Eigen::Vector3d prevtheta = previousTheta.segment(3 * i, 3);
+		theta.segment(3 * i, 3) = currtheta;
+		/*
+		Since the computation will give 0<=||theta||<= Pi, then, if theta's magnitude exceeds Pi just one step after,
+		then the axis will have a sudden reverse here, which is fine for rendering but not fine for computing w_{i+1} :(
+		*/
+		if (prevtheta.dot(currtheta) < 0 && currtheta.norm() > 0.8*M_PI)
+		{
+			//revert the rotation
+			std::cout << "Previous:\n";
+			std::cout << previousTheta.segment(3 * i, 3) / previousTheta.segment(3 * i, 3).norm() << std::endl << previousTheta.segment(3 * i, 3).norm() << std::endl;
+			previousTheta.segment(3 * i, 3) = (prevtheta.norm() - 2 * M_PI) * prevtheta / prevtheta.norm();
+			std::cout << "Current:\n";
+			std::cout << currtheta / currtheta.norm() << std::endl << currtheta.norm() << std::endl;
+			std::cout << "Fixed Previous:\n";
+			std::cout << previousTheta.segment(3 * i, 3) / previousTheta.segment(3 * i, 3).norm() << std::endl << previousTheta.segment(3 * i, 3).norm() << std::endl;
+		}
+		if (i==nbodies-1)
+		{
+			
+		}
+		
     }
     Eigen::VectorXd force = Eigen::VectorXd::Zero(3*nbodies);
     processGravityFieldForce(c, force);
@@ -206,7 +228,7 @@ void BirdsHook::loadScene()
 
 void BirdsHook::processGravityFieldForce(const VectorXd &c, VectorXd &F)
 {
-	// I did not set F to be zero, so just make sure where you shall initialize it
+	// I did not set F to be zero in this code.
 	int nbodies = (int)bodies_.size();
 	for (int i = 0; i < nbodies; i++)
 	{
@@ -284,6 +306,7 @@ void BirdsHook::computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw,
 			previousw.transpose() * MI * vecOp.TMatrix(params_.timeStep * previousw).inverse() * vecOp.TMatrix(previoustheta)).transpose();
 		if (f != NULL)
 			f->segment(3 * i, 3) = fval;
+		// Just give up for derivative of T matrix term since it is a small term.
 		Eigen::Matrix3d localDeriv = (MI * vecOp.TMatrix(-params_.timeStep * currentw) * vecOp.TMatrix(bodies_[i]->theta)).transpose();
         for(int j=0;j<3;j++)
             for(int k=0;k<3;k++)
@@ -298,6 +321,12 @@ void BirdsHook::computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw,
     }
     
 }
+
+/////////////////////////////////////////////////////////////////////////////////////
+/////
+///// Test If Computation Makes Sense
+/////
+/////////////////////////////////////////////////////////////////////////////////////
 
 void BirdsHook::testValueAndGrad()
 {
