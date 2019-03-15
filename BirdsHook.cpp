@@ -85,10 +85,11 @@ void BirdsHook::timeIntegration(Eigen::VectorXd &c, Eigen::VectorXd &cvel, Eigen
     c += params_.timeStep * cvel;
     int nbodies =  bodies_.size();
     VectorMath vecOp;
+	VectorXd previousTheta = theta;
     for(int i = 0; i<nbodies; i++)
     {
         Eigen::Matrix3d R = vecOp.rotationMatrix(theta.segment(3*i, 3)) * vecOp.rotationMatrix(params_.timeStep * w.segment(3*i, 3));
-        theta.segment(3*i, 3) = vecOp.axisAngle(R);
+		theta.segment(3*i, 3) = vecOp.axisAngle(R);
     }
     Eigen::VectorXd force = Eigen::VectorXd::Zero(3*nbodies);
     processGravityFieldForce(c, force);
@@ -99,7 +100,7 @@ void BirdsHook::timeIntegration(Eigen::VectorXd &c, Eigen::VectorXd &cvel, Eigen
     
     bool isSuccess = newtonSolver(w, [this, w](Eigen::VectorXd curw, Eigen::VectorXd &F, Eigen::SparseMatrix<double> *gradF)
                                   {
-                                      this->computeValueAndGrad(curw, w, &F, gradF);
+                                      this->computeValueAndGrad(curw, w, previousTheta, &F, gradF);
                                   }, params_.NewtonMaxIters, params_.NewtonTolerance);
     if(isSuccess)
     {
@@ -256,7 +257,8 @@ void BirdsHook::processGravityFieldHessian(const Eigen::VectorXd & c, std::vecto
 
 
 
-void BirdsHook::computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw, Eigen::VectorXd *f, Eigen::SparseMatrix<double> *df)
+void BirdsHook::computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw, 
+	Eigen::VectorXd prevtheta, ::VectorXd *f, Eigen::SparseMatrix<double> *df)
 {
     // Right now, in our case, d_{\theta} V(q^{i+1}) = 0
     int nbodies =  bodies_.size();
@@ -277,8 +279,9 @@ void BirdsHook::computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw,
 		*/
 		Eigen::Vector3d currentw = curw.segment(3 * i, 3);
 		Eigen::Vector3d previousw = prevw.segment(3 * i, 3);
-		Eigen::Vector3d fval = (currentw.transpose()* MI * vecOp.TMatrix(-params_.timeStep * currentw).inverse() * vecOp.TMatrix(bodies_[i]->theta) -
-			previousw.transpose() * MI * vecOp.TMatrix(params_.timeStep * previousw).inverse() * vecOp.TMatrix(bodies_[i]->theta)).transpose();
+		Eigen::Vector3d previoustheta = prevtheta.segment(3 * i, 3);
+		Eigen::Vector3d fval = (currentw.transpose()* MI * vecOp.TMatrix(-params_.timeStep * currentw).inverse() * vecOp.TMatrix(previoustheta) -
+			previousw.transpose() * MI * vecOp.TMatrix(params_.timeStep * previousw).inverse() * vecOp.TMatrix(previoustheta)).transpose();
 		if (f != NULL)
 			f->segment(3 * i, 3) = fval;
 		Eigen::Matrix3d localDeriv = (MI * vecOp.TMatrix(-params_.timeStep * currentw) * vecOp.TMatrix(bodies_[i]->theta)).transpose();

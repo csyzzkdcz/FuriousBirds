@@ -48,7 +48,7 @@ private:
     
     void timeIntegration(Eigen::VectorXd &c, Eigen::VectorXd &cvel, Eigen::VectorXd &theta, Eigen::VectorXd &w);
 
-    void computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw, Eigen::VectorXd *f, Eigen::SparseMatrix<double> *df);  // This function is used to update w
+    void computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw, Eigen::VectorXd, Eigen::VectorXd *f, Eigen::SparseMatrix<double> *df);  // This function is used to update w
     
     
     double time_;
