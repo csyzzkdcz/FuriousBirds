@@ -101,26 +101,7 @@ void BirdsHook::timeIntegration(Eigen::VectorXd &c, Eigen::VectorXd &cvel, Eigen
     for(int i = 0; i<nbodies; i++)
     {
         Eigen::Matrix3d R = vecOp.rotationMatrix(theta.segment(3*i, 3)) * vecOp.rotationMatrix(params_.timeStep * w.segment(3*i, 3));
-		Eigen::Vector3d currtheta = vecOp.axisAngle(R);
-		Eigen::Vector3d prevtheta = previousTheta.segment(3 * i, 3);
-		theta.segment(3 * i, 3) = currtheta;
-		/*
-		Since the computation will give 0<=||theta||<= Pi, then, if theta's magnitude exceeds Pi just one step after,
-		then the axis will have a sudden reverse here, which is fine for rendering but not fine for computing w_{i+1} :(
-		*/
-		if (prevtheta.dot(currtheta) < 0 && currtheta.norm() > 0.8*M_PI)
-		{
-			//revert the rotation
-			std::cout << "Previous:\n";
-			std::cout << previousTheta.segment(3 * i, 3) / previousTheta.segment(3 * i, 3).norm() << std::endl << previousTheta.segment(3 * i, 3).norm() << std::endl;
-			
-			previousTheta.segment(3 * i, 3) = (prevtheta.norm() - 2 * M_PI) * prevtheta / prevtheta.norm();
-			
-			std::cout << "Current:\n";
-			std::cout << currtheta / currtheta.norm() << std::endl << currtheta.norm() << std::endl;
-			std::cout << "Fixed Previous:\n";
-			std::cout << previousTheta.segment(3 * i, 3) / previousTheta.segment(3 * i, 3).norm() << std::endl << previousTheta.segment(3 * i, 3).norm() << std::endl;
-		}
+		theta.segment(3 * i, 3) = vecOp.axisAngle(R);
     }
     Eigen::VectorXd force = Eigen::VectorXd::Zero(3*nbodies);
     processGravityFieldForce(c, force);
