@@ -16,7 +16,7 @@ bool newtonSolver(Eigen::VectorXd &x, std::function<void (Eigen::VectorXd, Eigen
 		//std::cout << F.norm() << std::endl;
         if(F.norm()<NewtonTolerance)
         {
-            //std::cout<<"Optimal station reached!!"<<std::endl;
+            std::cout<<"Optimal station reached in "<<i<<" iterations"<<std::endl;
             return true;
         }
         Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;

@@ -116,7 +116,7 @@ void BirdsHook::timeIntegration(Eigen::VectorXd &c, Eigen::VectorXd &cvel, Eigen
                                   }, params_.NewtonMaxIters, params_.NewtonTolerance);
 	if(isSuccess)
     {
-        std::cout<<"Newton Soler succeeded!!"<<std::endl;
+        std::cout<<"Newton Solver succeeded!!"<<std::endl;
     }
 }
 
