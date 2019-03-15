@@ -101,17 +101,14 @@ void BirdsHook::timeIntegration(Eigen::VectorXd &c, Eigen::VectorXd &cvel, Eigen
 			//revert the rotation
 			std::cout << "Previous:\n";
 			std::cout << previousTheta.segment(3 * i, 3) / previousTheta.segment(3 * i, 3).norm() << std::endl << previousTheta.segment(3 * i, 3).norm() << std::endl;
+			
 			previousTheta.segment(3 * i, 3) = (prevtheta.norm() - 2 * M_PI) * prevtheta / prevtheta.norm();
+			
 			std::cout << "Current:\n";
 			std::cout << currtheta / currtheta.norm() << std::endl << currtheta.norm() << std::endl;
 			std::cout << "Fixed Previous:\n";
 			std::cout << previousTheta.segment(3 * i, 3) / previousTheta.segment(3 * i, 3).norm() << std::endl << previousTheta.segment(3 * i, 3).norm() << std::endl;
 		}
-		if (i==nbodies-1)
-		{
-			
-		}
-		
     }
     Eigen::VectorXd force = Eigen::VectorXd::Zero(3*nbodies);
     processGravityFieldForce(c, force);
