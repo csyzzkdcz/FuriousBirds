@@ -98,7 +98,7 @@ void BirdsHook::timeIntegration(Eigen::VectorXd &c, Eigen::VectorXd &cvel, Eigen
         cvel.segment(3*i, 3) += params_.timeStep * bodies_[i]->massInv * force.segment(3*i, 3);
     }
     
-    bool isSuccess = newtonSolver(w, [this, w](Eigen::VectorXd curw, Eigen::VectorXd &F, Eigen::SparseMatrix<double> *gradF)
+    bool isSuccess = newtonSolver(w, [this, w, previousTheta](Eigen::VectorXd curw, Eigen::VectorXd &F, Eigen::SparseMatrix<double> *gradF)
                                   {
                                       this->computeValueAndGrad(curw, w, previousTheta, &F, gradF);
                                   }, params_.NewtonMaxIters, params_.NewtonTolerance);
@@ -258,7 +258,7 @@ void BirdsHook::processGravityFieldHessian(const Eigen::VectorXd & c, std::vecto
 
 
 void BirdsHook::computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw, 
-	Eigen::VectorXd prevtheta, ::VectorXd *f, Eigen::SparseMatrix<double> *df)
+	Eigen::VectorXd prevtheta, Eigen::VectorXd *f, Eigen::SparseMatrix<double> *df)
 {
     // Right now, in our case, d_{\theta} V(q^{i+1}) = 0
     int nbodies =  bodies_.size();
@@ -305,11 +305,12 @@ void BirdsHook::testValueAndGrad()
     buildConfiguration(c, cvel, theta, w);
     
     Eigen::VectorXd prevw = w;
+	Eigen::VectorXd prevtheta = theta;
     timeIntegration(c, cvel, theta, w);
     Eigen::VectorXd f;
     Eigen::SparseMatrix<double> df;
     
-    computeValueAndGrad(w, prevw, &f, &df);
+    computeValueAndGrad(w, prevw, prevtheta, &f, &df);
     
     Eigen::VectorXd dir = Eigen::VectorXd::Random(w.size());
     dir.normalized();
@@ -319,7 +320,7 @@ void BirdsHook::testValueAndGrad()
         double eps = powf(10, -i);
         Eigen::VectorXd updatedw = w + eps * dir;
         Eigen::VectorXd updatedf;
-        computeValueAndGrad(updatedw, prevw, &updatedf, NULL);
+        computeValueAndGrad(updatedw, prevw, prevtheta, &updatedf, NULL);
         
         std::cout<<"EPS is: "<<eps<<std::endl;
         std::cout<<"The norm of directional derivative is: "<<(df*dir).norm()<<" The norm of finite difference is: "<< ((updatedf - f)/eps).norm() <<std::endl;
