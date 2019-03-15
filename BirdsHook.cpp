@@ -76,7 +76,19 @@ bool BirdsHook::simulateOneStep()
     buildConfiguration(c, cvel, theta, w);
     timeIntegration(c, cvel, theta, w);
     unbuildConfiguration(c, cvel, theta, w);
+	/* Check every states
+	std::cout << "\nCurrent States:\n\n";
+	for (int i = 0; i < (int)bodies_.size(); i++)
+	{
+		RigidBodyInstance &body = *bodies_[i];
+		std::cout << "Body " << i+1 << std::endl;
+		std::cout << "position:" << body.c.transpose() << std::endl;
+		std::cout << "axisangle:" << body.theta.transpose() << std::endl;
+		std::cout << "velocity:" << body.cvel.transpose() << std::endl;
+		std::cout << "angular velocity:" << body.w.transpose() << std::endl;
 
+	}
+	*/
     return false;
 }
 
@@ -116,12 +128,12 @@ void BirdsHook::timeIntegration(Eigen::VectorXd &c, Eigen::VectorXd &cvel, Eigen
     {
         cvel.segment(3*i, 3) += params_.timeStep * bodies_[i]->massInv * force.segment(3*i, 3);
     }
-    
+	Eigen::VectorXd prevw = w;
     bool isSuccess = newtonSolver(w, [this, w, previousTheta](Eigen::VectorXd curw, Eigen::VectorXd &F, Eigen::SparseMatrix<double> *gradF)
                                   {
                                       this->computeValueAndGrad(curw, w, previousTheta, &F, gradF);
                                   }, params_.NewtonMaxIters, params_.NewtonTolerance);
-    if(isSuccess)
+	if(isSuccess)
     {
         std::cout<<"Newton Soler succeeded!!"<<std::endl;
     }
@@ -288,14 +300,6 @@ void BirdsHook::computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw,
     for(int i=0;i<nbodies;i++)
     {
 		Eigen::Matrix3d MI = bodies_[i]->intertiaTensor;
-        /*Eigen::Vector3d avew = (curw.segment(3*i, 3) + prevw.segment(3*i, 3)) / 2.0;
-        Eigen::Matrix3d avewMat = vecOp.crossProductMatrix(avew);
-        if(f != NULL)
-            f->segment(3*i, 3) = MI*(curw.segment(3*i, 3) - prevw.segment(3*i, 3)) + params_.timeStep * avewMat * MI * prevw.segment(3*i, 3);
-
-        Eigen::Vector3d v = -0.5 * params_.timeStep * MI * prevw.segment(3*i, 3);
-        Eigen::Matrix3d localDeriv = MI + vecOp.crossProductMatrix(v);
-		*/
 		Eigen::Vector3d currentw = curw.segment(3 * i, 3);
 		Eigen::Vector3d previousw = prevw.segment(3 * i, 3);
 		Eigen::Vector3d previoustheta = prevtheta.segment(3 * i, 3);
@@ -304,7 +308,7 @@ void BirdsHook::computeValueAndGrad(Eigen::VectorXd curw, Eigen::VectorXd prevw,
 		if (f != NULL)
 			f->segment(3 * i, 3) = fval;
 		// Just give up for derivative of T matrix term since it is a small term.
-		Eigen::Matrix3d localDeriv = (MI * vecOp.TMatrix(-params_.timeStep * currentw) * vecOp.TMatrix(bodies_[i]->theta)).transpose();
+		Eigen::Matrix3d localDeriv = (MI * vecOp.TMatrix(-params_.timeStep * currentw).inverse() * vecOp.TMatrix(previoustheta)).transpose();
         for(int j=0;j<3;j++)
             for(int k=0;k<3;k++)
             {

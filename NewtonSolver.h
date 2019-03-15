@@ -9,9 +9,11 @@ bool newtonSolver(Eigen::VectorXd &x, std::function<void (Eigen::VectorXd, Eigen
 {
     for(int i=0; i<NewtonMaxIters; i++)
     {
+		//std::cout << i << std::endl;
         Eigen::VectorXd F,dx;
         Eigen::SparseMatrix<double> gradF;
         _computeFAndGradF(x, F, &gradF);
+		//std::cout << F.norm() << std::endl;
         if(F.norm()<NewtonTolerance)
         {
             //std::cout<<"Optimal station reached!!"<<std::endl;
